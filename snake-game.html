@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Simple Snake Game</title>
+<style>
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #222;
+    color: #eee;
+    margin: 0;
+    height: 100vh;
+    justify-content: center;
+  }
+  canvas {
+    background: #000;
+    display: block;
+    margin-bottom: 10px;
+    border: 2px solid #eee;
+  }
+  h1 {
+    margin-bottom: 5px;
+  }
+  #scoreboard {
+    font-size: 1.2em;
+    margin-bottom: 15px;
+  }
+  #instructions {
+    font-size: 0.9em;
+    color: #bbb;
+  }
+</style>
+</head>
+<body>
+
+<h1>Snake Game</h1>
+<div id="scoreboard">Score: 0 | High Score: 0</div>
+<canvas id="game" width="400" height="400"></canvas>
+<div id="instructions">Gunakan panah ← ↑ → ↓ untuk bergerak</div>
+
+<script>
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+
+  const box = 20; // ukuran tiap kotak
+  const canvasSize = 400;
+  const rowCount = canvasSize / box;
+
+  let snake = [{ x: 10 * box, y: 10 * box }];
+  let direction = null;
+  let food = {};
+  let score = 0;
+  let highScore = localStorage.getItem('snakeHighScore') || 0;
+  let gameInterval;
+
+  function placeFood() {
+    food = {
+      x: Math.floor(Math.random() * rowCount) * box,
+      y: Math.floor(Math.random() * rowCount) * box
+    };
+
+    // Pastikan food tidak muncul di tubuh ular
+    for (let segment of snake) {
+      if (segment.x === food.x && segment.y === food.y) {
+        placeFood();
+        break;
+      }
+    }
+  }
+
+  function draw() {
+    // Bersihkan canvas
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Gambar makanan
+    ctx.fillStyle = 'red';
+    ctx.fillRect(food.x, food.y, box, box);
+
+    // Gambar ular
+    for (let i = 0; i < snake.length; i++) {
+      ctx.fillStyle = i === 0 ? 'lime' : 'green';
+      ctx.fillRect(snake[i].x, snake[i].y, box, box);
+    }
+
+    // Gambar skor
+    document.getElementById('scoreboard').textContent = `Score: ${score} | High Score: ${highScore}`;
+  }
+
+  function update() {
+    if (!direction) return;
+
+    // Dapatkan posisi kepala ular sekarang
+    const head = { ...snake[0] };
+
+    // Update posisi kepala berdasarkan arah
+    if (direction === 'LEFT') head.x -= box;
+    if (direction === 'UP') head.y -= box;
+    if (direction === 'RIGHT') head.x += box;
+    if (direction === 'DOWN') head.y += box;
+
+    // Cek tabrakan dengan dinding
+    if (
+      head.x < 0 ||
+      head.x >= canvas.width ||
+      head.y < 0 ||
+      head.y >= canvas.height
+    ) {
+      gameOver();
+      return;
+    }
+
+    // Cek tabrakan dengan tubuh sendiri
+    for (let segment of snake) {
+      if (head.x === segment.x && head.y === segment.y) {
+        gameOver();
+        return;
+      }
+    }
+
+    // Tambah kepala baru di depan
+    snake.unshift(head);
+
+    // Cek apakah makan food
+    if (head.x === food.x && head.y === food.y) {
+      score++;
+      if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('snakeHighScore', highScore);
+      }
+      placeFood();
+    } else {
+      // Hapus ekor kalau gak makan food (gerak normal)
+      snake.pop();
+    }
+
+    draw();
+  }
+
+  function gameOver() {
+    clearInterval(gameInterval);
+    alert(`Game Over! Skor kamu: ${score}`);
+    // Reset game
+    snake = [{ x: 10 * box, y: 10 * box }];
+    direction = null;
+    score = 0;
+    placeFood();
+    draw();
+    // Mulai lagi setelah user siap
+    setTimeout(() => {
+      gameInterval = setInterval(update, 150);
+    }, 500);
+  }
+
+  document.addEventListener('keydown', e => {
+    const key = e.key;
+    if (key === 'ArrowLeft' && direction !== 'RIGHT') direction = 'LEFT';
+    else if (key === 'ArrowUp' && direction !== 'DOWN') direction = 'UP';
+    else if (key === 'ArrowRight' && direction !== 'LEFT') direction = 'RIGHT';
+    else if (key === 'ArrowDown' && direction !== 'UP') direction = 'DOWN';
+  });
+
+  // Mulai permainan
+  placeFood();
+  draw();
+  gameInterval = setInterval(update, 150);
+</script>
+
+</body>
+</html>
